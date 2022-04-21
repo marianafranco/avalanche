@@ -106,8 +106,6 @@ func RunMetrics(metricCount, labelCount, seriesCount, metricLength, labelLength,
 	registerMetrics(metricCount, metricLength, metricCycle, labelKeys)
 	cycleValues(labelKeys, labelValues, seriesCount, seriesCycle)
 	valueTick := time.NewTicker(time.Duration(valueInterval) * time.Second)
-	seriesTick := time.NewTicker(time.Duration(seriesInterval) * time.Second)
-	metricTick := time.NewTicker(time.Duration(metricInterval) * time.Second)
 	updateNotify := make(chan struct{}, 1)
 
 	go func() {
@@ -123,42 +121,56 @@ func RunMetrics(metricCount, labelCount, seriesCount, metricLength, labelLength,
 		}
 	}()
 
-	go func() {
-		for tick := range seriesTick.C {
-			fmt.Printf("%v: refreshing series cycle\n", tick)
-			metricsMux.Lock()
-			deleteValues(labelKeys, labelValues, seriesCount, seriesCycle)
-			seriesCycle++
-			cycleValues(labelKeys, labelValues, seriesCount, seriesCycle)
-			metricsMux.Unlock()
-			select {
-			case updateNotify <- struct{}{}:
-			default:
-			}
-		}
-	}()
+	var seriesTick *time.Ticker
+	if seriesInterval > 0 {
+		seriesTick = time.NewTicker(time.Duration(seriesInterval) * time.Second)
 
-	go func() {
-		for tick := range metricTick.C {
-			fmt.Printf("%v: refreshing metric cycle\n", tick)
-			metricsMux.Lock()
-			metricCycle++
-			unregisterMetrics()
-			registerMetrics(metricCount, metricLength, metricCycle, labelKeys)
-			cycleValues(labelKeys, labelValues, seriesCount, seriesCycle)
-			metricsMux.Unlock()
-			select {
-			case updateNotify <- struct{}{}:
-			default:
+		go func() {
+			for tick := range seriesTick.C {
+				fmt.Printf("%v: refreshing series cycle\n", tick)
+				metricsMux.Lock()
+				deleteValues(labelKeys, labelValues, seriesCount, seriesCycle)
+				seriesCycle++
+				cycleValues(labelKeys, labelValues, seriesCount, seriesCycle)
+				metricsMux.Unlock()
+				select {
+				case updateNotify <- struct{}{}:
+				default:
+				}
 			}
-		}
-	}()
+		}()
+	}
+
+	var metricTick *time.Ticker
+	if metricInterval > 0 {
+		metricTick := time.NewTicker(time.Duration(metricInterval) * time.Second)
+
+		go func() {
+			for tick := range metricTick.C {
+				fmt.Printf("%v: refreshing metric cycle\n", tick)
+				metricsMux.Lock()
+				metricCycle++
+				unregisterMetrics()
+				registerMetrics(metricCount, metricLength, metricCycle, labelKeys)
+				cycleValues(labelKeys, labelValues, seriesCount, seriesCycle)
+				metricsMux.Unlock()
+				select {
+				case updateNotify <- struct{}{}:
+				default:
+				}
+			}
+		}()
+	}
 
 	go func() {
 		<-stop
 		valueTick.Stop()
-		seriesTick.Stop()
-		metricTick.Stop()
+		if seriesTick != nil {
+			seriesTick.Stop()
+		}
+		if metricTick != nil {
+			metricTick.Stop()
+		}
 	}()
 
 	return updateNotify, nil
