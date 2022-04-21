@@ -37,6 +37,7 @@ import (
 	dto "github.com/prometheus/client_model/go"
 
 	"github.com/prometheus-community/avalanche/pkg/errors"
+	"github.com/prometheus/common/sigv4"
 )
 
 const maxErrMsgLen = 256
@@ -53,6 +54,7 @@ type ConfigWrite struct {
 	PprofURLs       []*url.URL
 	Tenant          string
 	TLSClientConfig tls.Config
+	Region          string
 }
 
 // Client for the remote write requests.
@@ -68,7 +70,11 @@ func SendRemoteWrite(config *ConfigWrite) error {
 	var rt http.RoundTripper = &http.Transport{
 		TLSClientConfig: &config.TLSClientConfig,
 	}
-	rt = &cortexTenantRoundTripper{tenant: config.Tenant, rt: rt}
+	rt, err := sigv4.NewSigV4RoundTripper(&sigv4.SigV4Config{Region: config.Region}, rt)
+	if err != nil {
+		return err
+	}
+	// rt = &cortexTenantRoundTripper{tenant: config.Tenant, rt: rt}
 	httpClient := &http.Client{Transport: rt}
 
 	c := Client{

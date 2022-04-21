@@ -48,6 +48,7 @@ var (
 	remoteReqsInterval  = kingpin.Flag("remote-write-interval", "delay between each remote write request.").Default("100ms").Duration()
 	remoteTenant        = kingpin.Flag("remote-tenant", "Tenant ID to include in remote_write send").Default("0").String()
 	tlsClientInsecure   = kingpin.Flag("tls-client-insecure", "Skip certificate check on tls connection").Default("false").Bool()
+	region              = kingpin.Flag("region", "AWS region to use on remote_write request to AMP.").Default("").String()
 )
 
 func main() {
@@ -71,6 +72,10 @@ func main() {
 			log.Fatal("remote send batch size should be more than zero")
 		}
 
+		if *region == "" {
+			log.Fatal("region can't be empty")
+		}
+
 		config := &metrics.ConfigWrite{
 			URL:             **remoteURL,
 			RequestInterval: *remoteReqsInterval,
@@ -81,6 +86,7 @@ func main() {
 			TLSClientConfig: tls.Config{
 				InsecureSkipVerify: *tlsClientInsecure,
 			},
+			Region: *region,
 		}
 
 		// Collect Pprof during the write only if not collecting within a regular interval.
