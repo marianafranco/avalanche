@@ -137,7 +137,12 @@ func (c *Client) write() error {
 	log.Printf("Sending:  %v timeseries, %v samples, %v timeseries per request, %v delay between requests\n", len(tss), c.config.RequestCount, c.config.BatchSize, c.config.RequestInterval)
 	ticker := time.NewTicker(c.config.RequestInterval)
 	defer ticker.Stop()
-	for ii := 0; ii < c.config.RequestCount; ii++ {
+	for ii := 0; ii <= c.config.RequestCount; ii++ {
+		// Keep running until the process is killed
+		if c.config.RequestCount == 0 {
+			ii = -1
+		}
+
 		// Download the pprofs during half of the iteration to get avarege readings.
 		// Do that only when it is not set to take profiles at a given interval.
 		if len(c.config.PprofURLs) > 0 && ii == c.config.RequestCount/2 {
