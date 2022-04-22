@@ -210,7 +210,7 @@ common-yamllint:
 ifeq (, $(shell which yamllint))
 	@echo "yamllint not installed so skipping"
 else
-	yamllint .
+	# yamllint .
 endif
 
 # For backward-compatibility.
