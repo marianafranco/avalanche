@@ -27,6 +27,7 @@ import (
 
 	"github.com/prometheus-community/avalanche/metrics"
 	"github.com/prometheus-community/avalanche/pkg/download"
+	"github.com/prometheus-community/avalanche/pkg/ecs"
 )
 
 var (
@@ -49,6 +50,7 @@ var (
 	remoteTenant        = kingpin.Flag("remote-tenant", "Tenant ID to include in remote_write send").Default("0").String()
 	tlsClientInsecure   = kingpin.Flag("tls-client-insecure", "Skip certificate check on tls connection").Default("false").Bool()
 	region              = kingpin.Flag("region", "AWS region to use on remote_write request to AMP.").Default("").String()
+	runOnFargate        = kingpin.Flag("run-on-fargate", "Running on ECS Fargate flag. When enabled will add extra label based of TaskId.").Default("false").Bool()
 )
 
 func main() {
@@ -56,6 +58,15 @@ func main() {
 	log.SetFlags(log.Ltime | log.Lshortfile) // Show file name and line in logs.
 	kingpin.CommandLine.Help = "avalanche - metrics test server"
 	kingpin.Parse()
+
+	if *runOnFargate {
+		taskID, err := ecs.GetTaskV4()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Task ID: %s\n", taskID)
+		*constLabels = append(*constLabels, fmt.Sprintf("taskId=%s", taskID))
+	}
 
 	stop := make(chan struct{})
 	defer close(stop)
