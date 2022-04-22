@@ -72,10 +72,6 @@ func main() {
 			log.Fatal("remote send batch size should be more than zero")
 		}
 
-		if *region == "" {
-			log.Fatal("region can't be empty")
-		}
-
 		config := &metrics.ConfigWrite{
 			URL:             **remoteURL,
 			RequestInterval: *remoteReqsInterval,
