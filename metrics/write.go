@@ -56,6 +56,7 @@ type ConfigWrite struct {
 	Tenant          string
 	TLSClientConfig tls.Config
 	Region          string
+	IgnoreErrors    bool
 }
 
 // Client for the remote write requests.
@@ -190,7 +191,12 @@ func (c *Client) write() error {
 		totalTime += time.Since(start)
 		if merr.Count() > 20 {
 			merr.Add(fmt.Errorf("too many errors"))
-			return merr.Err()
+			if c.config.IgnoreErrors {
+				log.Printf("Too many errors: %v\n", merr)
+				merr = &errors.MultiError{}
+			} else {
+				return merr.Err()
+			}
 		}
 	}
 	wgPprof.Wait()

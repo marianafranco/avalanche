@@ -51,6 +51,7 @@ var (
 	tlsClientInsecure   = kingpin.Flag("tls-client-insecure", "Skip certificate check on tls connection").Default("false").Bool()
 	region              = kingpin.Flag("region", "AWS region to use on remote_write request to AMP.").Default("").String()
 	runOnFargate        = kingpin.Flag("run-on-fargate", "Running on ECS Fargate flag. When enabled will add extra label based of TaskId.").Default("false").Bool()
+	ignoreErrors        = kingpin.Flag("ignore-errors", "Ignore remote write errors. When enabled the process will not be aborted in case of errors").Default("false").Bool()
 )
 
 func main() {
@@ -93,7 +94,8 @@ func main() {
 			TLSClientConfig: tls.Config{
 				InsecureSkipVerify: *tlsClientInsecure,
 			},
-			Region: *region,
+			Region:       *region,
+			IgnoreErrors: *ignoreErrors,
 		}
 
 		// Collect Pprof during the write only if not collecting within a regular interval.
